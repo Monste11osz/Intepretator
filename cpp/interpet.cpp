@@ -55,7 +55,6 @@ class Oper : public Lexem
 	OPERATOR opertype;
 public:
 	Oper();
-	//Oper(string);
 	Oper(char ch);
 	OPERATOR getType();
 	int getPriority();
