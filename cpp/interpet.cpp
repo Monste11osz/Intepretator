@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include <stack>
-#include <map>
 
 using namespace std;
 
@@ -22,17 +21,20 @@ enum OPERATOR {
 
 int PRIORITY[] = {
         -1, -1,
-        0, 0,
+        0, 1,
         1
 };
 
 
 class Lexem
 {
-protected:
 	LEXEM_TYPE type;
 public:
 	Lexem();
+	Lexem(LEXEM_TYPE typ) : type(typ)
+	{
+
+	}
 	LEXEM_TYPE getype();
 };
 
@@ -43,7 +45,7 @@ class Number : public Lexem
 public:
 
 	Number();
-	Number(int num);
+	Number(int num = 0);
 	int getValue() const;
 };
 
@@ -53,6 +55,7 @@ class Oper : public Lexem
 	OPERATOR opertype;
 public:
 	Oper();
+	//Oper(string);
 	Oper(char ch);
 	OPERATOR getType();
 	int getPriority();
@@ -67,7 +70,7 @@ Lexem::Lexem()
 
 Number::Number()
 {
-
+	value = 0;
 }
 
 Oper::Oper()
@@ -75,7 +78,7 @@ Oper::Oper()
 
 }
 
-Number::Number(int value)
+Number::Number(int value) : Lexem(NUMBER)
 {
 	this->value = value;
 }
@@ -85,8 +88,7 @@ int Number::getValue() const
     return value;
 }
 
-
-Oper::Oper(char ch)
+Oper::Oper(char ch) : Lexem(OPER)
 {
 	switch(ch)
 	{
@@ -163,10 +165,9 @@ vector<Lexem *> parseLexem(std::string codeline)
 {
 	int number = 0;
 	std::vector<Lexem *> infix;
-	cout << "qqq ";
 	for(int i = 0; i < codeline.size(); i++)
 	{
-		cout << codeline[i] << " ";
+		cout << codeline[i] << endl;
 		if(codeline[i] == '\t' || codeline[i] == ' ' || codeline[i] == '\n')
 		{
 			continue;
@@ -182,7 +183,6 @@ vector<Lexem *> parseLexem(std::string codeline)
 			infix.push_back(new Oper(codeline[i]));
 		}
 	}
-	cout << "123 ";
 	return infix;
 }
 
@@ -191,50 +191,48 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 {
 	std::stack<Oper *> operators;
 	std::vector<Lexem *> posix;
-	cout << "55555 ";
 	for(int i = 0; i < infix.size(); i++)
 	{
 		if(infix[i]->getype() == NUMBER)
 		{
+			cout << i << "  " << infix[i] << "Num" << endl;
 			posix.push_back(infix[i]);
 		}
 		else if(infix[i]->getype() == OPER)
 		{
-			if(operators.empty())
+			/*if(operators.empty())
 			{
+				operators.push(static_cast<Oper *>(infix[i]));
+
+			}*/
+			if(static_cast<Oper *>(infix[i])->getType() == LBRACKET)
+			{
+				operators.push(static_cast<Oper *>(infix[i]));
+			}
+			else if(static_cast<Oper *>(infix[i])->getType() == RBRACKET)
+			{
+				while(static_cast<Oper *>(operators.top())->getType() != LBRACKET)
+				{
+					posix.push_back(operators.top());
+					operators.pop();
+				}
+				operators.pop();
+			}
+			else if(!operators.empty() && operators.top()->getPriority() >= static_cast<Oper *>(infix[i])->getPriority())
+			{
+		 		posix.push_back(operators.top());
+				operators.pop();
 				operators.push(static_cast<Oper *>(infix[i]));
 			}
 			else
 			{
-				if(static_cast<Oper *>(infix[i])->getType() == LBRACKET)
-				{
-					operators.push(static_cast<Oper *>(infix[i]));
-				}
-				else if(static_cast<Oper *>(infix[i])->getType() == RBRACKET)
-				{
-					while(static_cast<Oper *>(operators.top())->getType() != LBRACKET)
-					{
-						posix.push_back(operators.top());
-						operators.pop();
-					}
-					operators.pop();
-				}
-
-				else if(!operators.empty() && (operators.top())->getPriority() >= static_cast<Oper *>(infix[i])->getPriority())
-				{
-				 	posix.push_back(operators.top());
-					operators.pop();
-					operators.push(static_cast<Oper *>(infix[i]));
-				}
-				else
-				{
-					operators.push(static_cast<Oper *>(infix[i]));
-				}
+				operators.push(static_cast<Oper *>(infix[i]));
 			}
 		}
+
 	}
-	cout << "444 ";
-	while(operators.empty())
+	cout << "444 " << endl;
+	while(!operators.empty())
 	{
 		posix.push_back(operators.top());
 		operators.pop();
@@ -247,7 +245,7 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 int evaluatePostfix(std::vector<Lexem *> poliz)
 {
 	std::stack<Number *> stack;
-	int val = 0, l, r;
+	int l, r, valu = 0;
 	for(int i = 0; i < poliz.size(); i++)
 	{
 		if(poliz[i]->getype() == NUMBER)
@@ -263,9 +261,9 @@ int evaluatePostfix(std::vector<Lexem *> poliz)
 			stack.push(new Number(static_cast<Oper *>(poliz[i])->getValue(l, r)));
 		}
 	}
-	val = stack.top()->getValue();
+	valu = stack.top()->getValue();
 	stack.pop();
-	return val;
+	return valu;
 }
 
 int main()
@@ -273,14 +271,9 @@ int main()
 	std::string codeline;
 	std::vector<Lexem *> infix;
 	std::vector<Lexem *> postfix;
-	int value;
+	int value = 0;
 	while(std::getline(std::cin, codeline))
 	{
-		if(codeline == "exit")
-		{
-			return 0;
-		}
-		std::cout << "000 ";
 		infix = parseLexem(codeline);
 		postfix = buildPostfix(infix);
 		value = evaluatePostfix(postfix);
