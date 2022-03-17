@@ -3,8 +3,10 @@
 #include <string>
 #include <vector>
 #include <stack>
+#include <map>
 
 using namespace std;
+
 
 enum LEXEM_TYPE {
         NUMBER,
@@ -14,15 +16,18 @@ enum LEXEM_TYPE {
 enum OPERATOR {
         LBRACKET,
         RBRACKET,
+	ASSIGN,
         PLUS,
         MINUS,
         MULTIPLY
+
 };
 
 int PRIORITY[] = {
         -1, -1,
-        0, 1,
-        1
+        0,
+	1, 1,
+	2
 };
 
 
@@ -37,7 +42,6 @@ public:
 	}
 	LEXEM_TYPE getype();
 };
-
 
 class Number : public Lexem
 {
@@ -61,6 +65,14 @@ public:
 	int getValue(const Number &left, const Number &right);
 };
 
+class Variable : public Lexem
+{
+	string name;
+public:
+	Variable(const string &name);
+	int getValue();
+	void setValue(int value);
+};
 
 Lexem::Lexem()
 {
@@ -174,8 +186,12 @@ vector<Lexem *> parseLexem(std::string codeline)
 		else if(codeline[i] >= '0' && codeline[i] <= '9')
 		{
 			number = number * 10 + codeline[i] - '0';
-			infix.push_back(new Number(number));
-			number = 0;
+			if(codeline[i + 1] < '0' || codeline[i + 1] > '9')
+			{
+				cout << "N " << number << endl;
+				infix.push_back(new Number(number));
+				number = 0;
+			}
 		}
 		else
 		{
@@ -199,12 +215,12 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 		}
 		else if(infix[i]->getype() == OPER)
 		{
-			/*if(operators.empty())
+			if(operators.empty())
 			{
 				operators.push(static_cast<Oper *>(infix[i]));
 
-			}*/
-			if(static_cast<Oper *>(infix[i])->getType() == LBRACKET)
+			}
+			else if(static_cast<Oper *>(infix[i])->getType() == LBRACKET)
 			{
 				operators.push(static_cast<Oper *>(infix[i]));
 			}
@@ -257,7 +273,7 @@ int evaluatePostfix(std::vector<Lexem *> poliz)
 			stack.pop();
 			r = stack.top()->getValue();
 			stack.pop();
-			stack.push(new Number(static_cast<Oper *>(poliz[i])->getValue(l, r)));
+			stack.push(new Number(static_cast<Oper *>(poliz[i])->getValue(r, l)));
 		}
 	}
 	valu = stack.top()->getValue();
