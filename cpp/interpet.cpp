@@ -10,7 +10,8 @@ using namespace std;
 
 enum LEXEM_TYPE {
         NUMBER,
-        OPER
+        OPER,
+	VARIA
 };
 
 enum OPERATOR {
@@ -29,7 +30,6 @@ int PRIORITY[] = {
 	1, 1,
 	2
 };
-
 
 class Lexem
 {
@@ -65,14 +65,39 @@ public:
 	int getValue(const Number &left, const Number &right);
 };
 
+
+map<string, int> Var;
+
+
 class Variable : public Lexem
 {
 	string name;
 public:
-	Variable(const string &name);
+	Variable();
+	Variable(string name);
 	int getValue();
 	void setValue(int value);
 };
+
+Variable::Variable()
+{
+	name = "";
+}
+
+int Variable::getValue()
+{
+	return Var[name];
+}
+
+void Variable::setValue(int value)
+{
+	Var[name] = value;
+}
+
+Variable::Variable(string name) : Lexem(VARIA)
+{
+	this->name = name;
+}
 
 Lexem::Lexem()
 {
@@ -128,10 +153,13 @@ Oper::Oper(char ch) : Lexem(OPER)
 			opertype = RBRACKET;
 			break;
 		}
+		case '=':
+		{
+			opertype = ASSIGN;
+			break;
+		}
 	}
 }
-
-
 
 OPERATOR Oper::getType()
 {
@@ -160,6 +188,10 @@ int Oper::getValue(const Number & left, const Number & right)
 		{
 			return left.getValue() * right.getValue();
 		}
+		case ASSIGN:
+		{
+			return right.getValue();
+		}
 	}
 	return 0;
 }
@@ -171,14 +203,29 @@ LEXEM_TYPE Lexem::getype()
 }
 
 
+int assign(Lexem *left, Lexem *right)
+{
+	int num;
+	if(right->getype() == NUMBER)
+	{
+		num = static_cast<Number *>(right)->getValue();
+	}
+	if(right->getype() == VARIA)
+	{
+		num = static_cast<Variable *>(right)->getValue();
+	}
+	static_cast<Variable *>(left)->setValue(num);
+	return num;
+}
+
 
 vector<Lexem *> parseLexem(std::string codeline)
 {
 	int number = 0;
 	std::vector<Lexem *> infix;
+	string name;
 	for(int i = 0; i < codeline.size(); i++)
 	{
-		cout << codeline[i] << endl;
 		if(codeline[i] == '\t' || codeline[i] == ' ' || codeline[i] == '\n')
 		{
 			continue;
@@ -188,9 +235,17 @@ vector<Lexem *> parseLexem(std::string codeline)
 			number = number * 10 + codeline[i] - '0';
 			if(codeline[i + 1] < '0' || codeline[i + 1] > '9')
 			{
-				cout << "N " << number << endl;
 				infix.push_back(new Number(number));
 				number = 0;
+			}
+		}
+		else if(codeline[i] >= 'A' && codeline[i] <= 'Z' || codeline[i] >= 'a' && codeline[i] <= 'z')
+		{
+			name += codeline[i];
+			if(!((codeline[i + 1] >= 'A' && codeline[i + 1] <= 'Z') || (codeline[i + 1] >= 'a' && codeline[i + 1] <= 'z')) || (codeline[i + 1] < '0' || codeline[i + 1] > '9'))
+			{
+				infix.push_back(new Variable(name));
+				name = "";
 			}
 		}
 		else
@@ -208,9 +263,9 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 	std::vector<Lexem *> posix;
 	for(int i = 0; i < infix.size(); i++)
 	{
-		if(infix[i]->getype() == NUMBER)
+		if(infix[i]->getype() == NUMBER || infix[i]->getype() == VARIA)
 		{
-			cout << i << "  " << infix[i] << "Num" << endl;
+			//cout << i << "  " << infix[i] << "Num or Var" << endl;
 			posix.push_back(infix[i]);
 		}
 		else if(infix[i]->getype() == OPER)
@@ -246,7 +301,6 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 		}
 
 	}
-	cout << "444 " << endl;
 	while(!operators.empty())
 	{
 		posix.push_back(operators.top());
@@ -260,20 +314,30 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 int evaluatePostfix(std::vector<Lexem *> poliz)
 {
 	std::stack<Number *> stack;
-	int l, r, valu = 0;
+	int valu = 0;
+	Lexem *l, *r;
 	for(int i = 0; i < poliz.size(); i++)
 	{
-		if(poliz[i]->getype() == NUMBER)
+		if(poliz[i]->getype() == NUMBER || poliz[i]->getype() == VARIA)
 		{
 			stack.push(static_cast<Number *>(poliz[i]));
 		}
 		else if(poliz[i]->getype() == OPER)
 		{
-			l = stack.top()->getValue();
+			//static_cast<Number *>(r) = stack.top()->getValue();
+			r = stack.top();
 			stack.pop();
-			r = stack.top()->getValue();
+			//static_cast<Number *>(l) = stack.top()->getValue();
+			l = stack.top();
 			stack.pop();
-			stack.push(new Number(static_cast<Oper *>(poliz[i])->getValue(r, l)));
+			if(static_cast<Oper *>(poliz[i])->getType() == ASSIGN)
+			{
+				stack.push(new Number(assign(l, r)));
+			}
+			else
+			{
+				stack.push(new Number(static_cast<Oper *>(poliz[i])->getValue(static_cast<Number *>(l)->getValue(), static_cast<Number *>(r)->getValue())));
+			}
 		}
 	}
 	valu = stack.top()->getValue();
