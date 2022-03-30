@@ -15,12 +15,19 @@ enum LEXEM_TYPE {
 };
 
 enum OPERATOR {
-        LBRACKET,
-        RBRACKET,
+        LBRACKET, RBRACKET,
 	ASSIGN,
-        PLUS,
-        MINUS,
-        MULTIPLY
+	OR,
+	AND,
+	BITOR,
+	XOR,
+	BITAND,
+	EQ, NEQ,
+	LEQ, LT,
+	GEQ, GT,
+	SHL, SHR,
+        PLUS, MINUS,
+        MULTIPLY, DIV, MOD
 
 };
 
@@ -28,7 +35,32 @@ int PRIORITY[] = {
         -1, -1,
         0,
 	1, 1,
-	2
+	2,
+	3,
+	4,
+	5,
+	6, 6,
+	7, 7,
+	8, 8,
+	9, 9,
+	10, 10, 10
+};
+
+
+string OPERTEXT[] = {
+	"(", ")",
+	"=",
+	"or",
+	"and",
+	"|",
+	"^",
+	"&",
+	"==", "!=",
+	"<<", ">>",
+	"<=", "<",
+	">=", ">",
+	"+", "-",
+	"*", "/", "%"
 };
 
 class Lexem
@@ -59,7 +91,7 @@ class Oper : public Lexem
 	OPERATOR opertype;
 public:
 	Oper();
-	Oper(char ch);
+	Oper(string ch);
 	OPERATOR getType();
 	int getPriority();
 	int getValue(const Number &left, const Number &right);
@@ -124,41 +156,93 @@ int Number::getValue() const
     return value;
 }
 
-Oper::Oper(char ch) : Lexem(OPER)
+Oper::Oper(string ch) : Lexem(OPER)
 {
-	switch(ch)
+	if(ch == "+")
 	{
-		case '+':
-		{
-			opertype = PLUS;
-			break;
-		}
-		case '-':
-		{
-			opertype = MINUS;
-			break;
-		}
-		case '*':
-		{
-			opertype = MULTIPLY;
-			break;
-		}
-		case '(':
-		{
-			opertype = LBRACKET;
-			break;
-		}
-		case ')':
-		{
-			opertype = RBRACKET;
-			break;
-		}
-		case '=':
-		{
-			opertype = ASSIGN;
-			break;
-		}
+		opertype = PLUS;
 	}
+	else if(ch == "-")
+	{
+		opertype = MINUS;
+	}
+	else if(ch == "*")
+	{
+		opertype = MULTIPLY;
+	}
+	else if(ch == "(")
+	{
+		opertype = LBRACKET;
+	}
+	else if(ch == ")")
+	{
+		opertype = RBRACKET;
+	}
+	else if(ch == "=")
+	{
+		opertype = ASSIGN;
+	}
+	else if(ch == "or")
+	{
+		opertype = OR;
+	}
+	else if(ch == "and")
+	{
+		opertype = AND;
+	}
+	else if(ch == "|")
+	{
+		opertype = BITOR;
+	}
+	else if(ch == "^")
+	{
+		opertype = XOR;
+	}
+	else if(ch == "&")
+	{
+		opertype = BITAND;
+	}
+	else if(ch == "==")
+	{
+		opertype = EQ;
+	}
+	else if(ch == "!=")
+	{
+		opertype = NEQ;
+	}
+	else if(ch == "<=")
+	{
+		opertype = LEQ;
+	}
+	else if(ch == "<")
+	{
+		opertype = LT;
+	}
+	else if(ch == ">=")
+	{
+		opertype = GEQ;
+	}
+	else if(ch == ">")
+	{
+		opertype = GT;
+	}
+	else if(ch == "<<")
+	{
+		opertype = SHL;
+	}
+	else if(ch == ">>")
+	{
+		opertype = SHR;
+	}
+	else if(ch == "/")
+	{
+		opertype = DIV;
+	}
+	else if(ch == "%")
+	{
+		opertype = MOD;
+	}
+
 }
 
 OPERATOR Oper::getType()
@@ -192,6 +276,67 @@ int Oper::getValue(const Number & left, const Number & right)
 		{
 			return right.getValue();
 		}
+		case OR:
+		{
+			return left.getValue() || right.getValue();
+		}
+		case AND:
+		{
+			return left.getValue() && right.getValue();
+		}
+		case BITOR:
+		{
+			return left.getValue() | right.getValue();
+		}
+		case XOR:
+		{
+			return left.getValue() ^ right.getValue();
+		}
+		case BITAND:
+		{
+			return left.getValue() & right.getValue();
+		}
+		case EQ:
+		{
+			return left.getValue() == right.getValue();
+		}
+		case NEQ:
+		{
+			return left.getValue() != right.getValue();
+		}
+		case LEQ:
+		{
+			return left.getValue() <= right.getValue();
+		}
+		case LT:
+		{
+			return left.getValue() < right.getValue();
+		}
+		case GEQ:
+		{
+			return left.getValue() >= right.getValue();
+		}
+		case GT:
+		{
+			return left.getValue() > right.getValue();
+		}
+		case SHL:
+		{
+			return left.getValue() << right.getValue();
+		}
+		case SHR:
+		{
+			return left.getValue() >> right.getValue();
+		}
+		case DIV:
+		{
+			return left.getValue() / right.getValue();
+		}
+		case MOD:
+		{
+			return left.getValue() % right.getValue();
+		}
+
 	}
 	return 0;
 }
@@ -250,7 +395,16 @@ vector<Lexem *> parseLexem(std::string codeline)
 		}
 		else
 		{
-			infix.push_back(new Oper(codeline[i]));
+			int n = sizeof(OPERTEXT) / sizeof(string);
+			for(int op = 0; op < n; op++)
+			{
+				string subcodeline = codeline.substr(i, OPERTEXT[op].size());
+				if(OPERTEXT[op] == subcodeline)
+				{
+					infix.push_back(new Oper(OPERTEXT[op]));
+					break;
+				}
+			}
 		}
 	}
 	return infix;
