@@ -15,8 +15,8 @@ enum LEXEM_TYPE {
 };
 
 enum OPERATOR {
+	GOTO, ASSIGN, COLON,
         LBRACKET, RBRACKET,
-	ASSIGN,
 	OR,
 	AND,
 	BITOR,
@@ -32,14 +32,15 @@ enum OPERATOR {
 };
 
 int PRIORITY[] = {
-        -1, -1,
-        0,
-	1, 1,
+        -1, 0, -1,
+	-1, -1,
+	1,
 	2,
 	3,
 	4,
 	5,
 	6, 6,
+	7, 7,
 	7, 7,
 	8, 8,
 	9, 9,
@@ -48,8 +49,8 @@ int PRIORITY[] = {
 
 
 string OPERTEXT[] = {
+	"goto", ":=", ":",
 	"(", ")",
-	"=",
 	"or",
 	"and",
 	"|",
@@ -83,6 +84,7 @@ public:
 	Number();
 	Number(int num = 0);
 	int getValue() const;
+	void print();
 };
 
 
@@ -93,13 +95,15 @@ public:
 	Oper();
 	Oper(string ch);
 	OPERATOR getType();
+	Oper(OPERATOR opertype);
 	int getPriority();
 	int getValue(const Number &left, const Number &right);
+	void print();
 };
 
 
 map<string, int> Var;
-
+map<string, int> Labels;
 
 class Variable : public Lexem
 {
@@ -109,7 +113,44 @@ public:
 	Variable(string name);
 	int getValue();
 	void setValue(int value);
+	string getName();
+	bool inLableTable();
+	void print();
 };
+
+class Goto : public Oper
+{
+	int row;
+public:
+	enum {UNDEFINED = -INT32_MAX};
+	Goto(OPERATOR opertype);
+	void setRow(int row);
+	int getRow();
+	void print();
+};
+
+
+Goto::Goto(OPERATOR opertype) : Oper(opertype)
+{
+	row = UNDEFINED;
+}
+
+
+void Goto::setRow(int row)
+{
+	Goto::row = row;
+}
+
+
+int Goto::getRow()
+{
+	return row;
+}
+
+void Goto::print()
+{
+	cout << "[<row " << row << ">" << OPERTEXT[this->getType()] << "] ";
+}
 
 Variable::Variable()
 {
@@ -129,6 +170,21 @@ void Variable::setValue(int value)
 Variable::Variable(string name) : Lexem(VARIA)
 {
 	this->name = name;
+}
+
+string Variable::getName()
+{
+	return name;
+}
+
+bool Variable::inLableTable()
+{
+	return (Labels.find(this->name) != Labels.end());
+}
+
+void Variable::print()
+{
+	cout << name << Var[name] << "|";
 }
 
 Lexem::Lexem()
@@ -156,6 +212,11 @@ int Number::getValue() const
     return value;
 }
 
+void Number::print()
+{
+	cout << value;
+}
+
 Oper::Oper(string ch) : Lexem(OPER)
 {
 	if(ch == "+")
@@ -178,13 +239,21 @@ Oper::Oper(string ch) : Lexem(OPER)
 	{
 		opertype = RBRACKET;
 	}
-	else if(ch == "=")
+	else if(ch == ":=")
 	{
 		opertype = ASSIGN;
 	}
 	else if(ch == "or")
 	{
 		opertype = OR;
+	}
+	else if(ch == "goto")
+	{
+		opertype = GOTO;
+	}
+	else if(ch == ":")
+	{
+		opertype = COLON;
 	}
 	else if(ch == "and")
 	{
@@ -243,6 +312,11 @@ Oper::Oper(string ch) : Lexem(OPER)
 		opertype = MOD;
 	}
 
+}
+
+Oper::Oper(OPERATOR opertype)
+{
+	this->opertype = opertype;
 }
 
 OPERATOR Oper::getType()
@@ -341,16 +415,19 @@ int Oper::getValue(const Number & left, const Number & right)
 	return 0;
 }
 
+void Oper::print()
+{
+	cout << OPERTEXT[opertype];
+}
 
 LEXEM_TYPE Lexem::getype()
 {
 	return type;
 }
 
-
 int assign(Lexem *left, Lexem *right)
 {
-	int num;
+	int num = 0;
 	if(right->getype() == NUMBER)
 	{
 		num = static_cast<Number *>(right)->getValue();
@@ -363,6 +440,37 @@ int assign(Lexem *left, Lexem *right)
 	return num;
 }
 
+
+void joinGotoAndLabel(Variable *lexemvar, std::stack<Oper *> &stack)
+{
+	if(stack.top()->getType() == GOTO)
+	{
+		Goto *lexemgoto = (Goto *)stack.top();
+		lexemgoto->setRow(Labels[lexemvar->getName()]);
+	}
+}
+
+void initLabels(std::vector<Lexem *> &infix, int row)
+{
+	for(int i = 1; i < (int)infix.size(); i++)
+	{
+		if(infix[i - 1]->getype() == VARIA && infix[i]->getype() == OPER)
+		{
+			cout << "  23" << endl;
+			if(static_cast<Oper *>(infix[i])->getType() == COLON)
+			{
+				cout << "ttt" << endl;
+				Labels[((Variable *)infix[i - 1])->getName()] = row;
+				delete infix[i - 1];
+				delete infix[i];
+				infix[i - 1] = nullptr;
+				infix[i] = nullptr;
+				i++;
+			}
+		}
+		cout << "  24" << endl;
+	}
+}
 
 vector<Lexem *> parseLexem(std::string codeline)
 {
@@ -415,25 +523,45 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 {
 	std::stack<Oper *> operators;
 	std::vector<Lexem *> posix;
-	for(int i = 0; i < infix.size(); i++)
+	for(const auto &lexem: infix)
 	{
-		if(infix[i]->getype() == NUMBER || infix[i]->getype() == VARIA)
+		if(lexem == nullptr)
 		{
-			//cout << i << "  " << infix[i] << "Num or Var" << endl;
-			posix.push_back(infix[i]);
+			continue;
 		}
-		else if(infix[i]->getype() == OPER)
+		if(lexem->getype() == VARIA)
+		{
+			/*
+			cout << "56" << endl;
+			Variable *lexemvar = (Variable *)lexem;
+			if(lexemvar->inLableTable())
+			{
+				joinGotoAndLabel(lexemvar, operators);
+			}
+			else
+			{
+				posix.push_back(lexem);
+			}
+			cout << "57" << endl;
+			*/
+			posix.push_back(lexem);
+		}
+		else if(lexem->getype() == NUMBER)
+		{
+			posix.push_back(lexem);
+			cout << "aaa" << endl;
+		}
+		else if(lexem->getype() == OPER)
 		{
 			if(operators.empty())
 			{
-				operators.push(static_cast<Oper *>(infix[i]));
-
+				operators.push(static_cast<Oper *>(lexem));
 			}
-			else if(static_cast<Oper *>(infix[i])->getType() == LBRACKET)
+			else if(static_cast<Oper *>(lexem)->getType() == LBRACKET)
 			{
-				operators.push(static_cast<Oper *>(infix[i]));
+				operators.push(static_cast<Oper *>(lexem));
 			}
-			else if(static_cast<Oper *>(infix[i])->getType() == RBRACKET)
+			else if(static_cast<Oper *>(lexem)->getType() == RBRACKET)
 			{
 				while(static_cast<Oper *>(operators.top())->getType() != LBRACKET)
 				{
@@ -442,18 +570,16 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 				}
 				operators.pop();
 			}
-			else if(!operators.empty() && operators.top()->getPriority() >= static_cast<Oper *>(infix[i])->getPriority())
-			{
-		 		posix.push_back(operators.top());
-				operators.pop();
-				operators.push(static_cast<Oper *>(infix[i]));
-			}
 			else
 			{
-				operators.push(static_cast<Oper *>(infix[i]));
+				while(!operators.empty() && operators.top()->getPriority() >= static_cast<Oper *>(lexem)->getPriority())
+				{
+					posix.push_back(operators.top());
+					operators.pop();
+				}
+				operators.push(static_cast<Oper *>(lexem));
 			}
 		}
-
 	}
 	while(!operators.empty())
 	{
@@ -465,52 +591,72 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 }
 
 
-int evaluatePostfix(std::vector<Lexem *> poliz)
+int evaluatePostfix(std::vector<Lexem *> poliz, int row)
 {
 	std::stack<Number *> stack;
 	int valu = 0;
 	Lexem *l, *r;
 	for(int i = 0; i < poliz.size(); i++)
 	{
-		if(poliz[i]->getype() == NUMBER || poliz[i]->getype() == VARIA)
+		if(poliz[i]->getype() == VARIA)
+		{
+			stack.push(static_cast<Number *>(poliz[i]));
+		}
+		else if(poliz[i]->getype() == NUMBER)
 		{
 			stack.push(static_cast<Number *>(poliz[i]));
 		}
 		else if(poliz[i]->getype() == OPER)
 		{
-			//static_cast<Number *>(r) = stack.top()->getValue();
+			if(static_cast<Oper *>(poliz[i])->getType() == GOTO)
+			{
+				Goto *lexemgoto = (Goto *)poliz[i];
+				return lexemgoto->getRow();
+			}
 			r = stack.top();
 			stack.pop();
-			//static_cast<Number *>(l) = stack.top()->getValue();
 			l = stack.top();
 			stack.pop();
 			if(static_cast<Oper *>(poliz[i])->getType() == ASSIGN)
 			{
+				cout << "assign" << endl;
 				stack.push(new Number(assign(l, r)));
 			}
 			else
 			{
 				stack.push(new Number(static_cast<Oper *>(poliz[i])->getValue(static_cast<Number *>(l)->getValue(), static_cast<Number *>(r)->getValue())));
 			}
+			valu = stack.top()->getValue();
+			cout << valu << endl;
 		}
 	}
-	valu = stack.top()->getValue();
-	stack.pop();
-	return valu;
+	return row + 1;
 }
 
 int main()
 {
 	std::string codeline;
-	std::vector<Lexem *> infix;
-	std::vector<Lexem *> postfix;
+	std::vector<std::vector<Lexem *>> infix;
+	std::vector<std::vector<Lexem *>> postfix;
 	int value = 0;
 	while(std::getline(std::cin, codeline))
 	{
-		infix = parseLexem(codeline);
-		postfix = buildPostfix(infix);
-		value = evaluatePostfix(postfix);
-		std::cout << value << std::endl;
+		infix.push_back(parseLexem(codeline));
+	}
+	for(int row = 0; row < (int)infix.size(); ++row)
+	{
+		initLabels(infix[row], row);
+	}
+	cout << "pp" << endl;
+	for(const auto &infixs : infix)
+	{
+		postfix.push_back(buildPostfix(infixs));
+	}
+	cout << "PPPP" << endl;
+	int row = 0;
+	while(0 <= row && row < postfix.size())
+	{
+		row = evaluatePostfix(postfix[row], row);
 	}
 	return 0;
 }
