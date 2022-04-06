@@ -472,7 +472,108 @@ void initLabels(std::vector<Lexem *> &infix, int row)
 	}
 }
 
-vector<Lexem *> parseLexem(std::string codeline)
+bool isNum(char ch)
+{
+	return (ch >= '0' && ch <= '9');
+}
+
+bool isVaria(char ch)
+{
+	return ((ch >= 'a' && ch <= 'z') ||(ch >= 'A' && ch <= 'Z'));
+}
+
+Lexem* oper(string &codeline, int i, int &next)
+{
+	int n = sizeof(OPERTEXT) / sizeof(string);
+	for(int op = 0; op < n; op++)
+	{
+		string subcodeline = codeline.substr(i, OPERTEXT[op].size());
+		if(OPERTEXT[op] == subcodeline)
+		{
+			next = i + OPERTEXT[op].size();
+			return new Oper(OPERTEXT[op]);
+		}
+	}
+	return nullptr;
+}
+
+Lexem* Num(string &codeline, int i, int &next)
+{
+	int k;
+	for(k = 0; k < codeline.size(); k++)
+	{
+		if(!isNum(codeline[i + k]))
+		{
+			break;
+		}
+	}
+	if(k != 0)
+	{
+		//number = number * 10 + codeline[k] - '0';
+		string subcodeline = codeline.substr(i, k);
+		next = i + k;
+		return new Number(stoi(subcodeline));
+	}
+	return nullptr;
+}
+
+Lexem* var(string &codeline, int i, int &next)
+{
+	string name;
+	int k;
+	for(k = 0; k < codeline.size(); k++)
+	{
+		if(!isVaria(codeline[i + k]))
+		{
+			break;
+		}
+	}
+	if(k != 0)
+	{
+		name = codeline.substr(i, k);
+		next = i + k;
+		return new Variable(name);
+	}
+	return nullptr;
+}
+
+std::vector<Lexem *> parseLexem(string &codeline)
+{
+	std::vector<Lexem *> infix;
+	Lexem* set;
+	for (int i = 0, next = 0; i < codeline.size();)
+	{
+		if(isspace(codeline[i]))
+		{
+			i++;
+			continue;
+		}
+		set = oper(codeline, i, next);
+		if(set != nullptr)
+		{
+			infix.push_back(set);
+			i = next;
+			continue;
+		}
+		set = Num(codeline, i, next);
+		if(set != nullptr)
+		{
+			infix.push_back(set);
+			i = next;
+			continue;
+		}
+		set = var(codeline, i, next);
+		if(set != nullptr)
+		{
+			infix.push_back(set);
+			i = next;
+			continue;
+		}
+	}
+	return infix;
+}
+
+/*vector<Lexem *> parseLexem(std::string codeline)
 {
 	int number = 0;
 	std::vector<Lexem *> infix;
@@ -517,7 +618,7 @@ vector<Lexem *> parseLexem(std::string codeline)
 	}
 	return infix;
 }
-
+*/
 
 std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 {
@@ -531,20 +632,20 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 		}
 		if(lexem->getype() == VARIA)
 		{
-			/*
+
 			cout << "56" << endl;
 			Variable *lexemvar = (Variable *)lexem;
 			if(lexemvar->inLableTable())
 			{
+				cout << "join" << endl;
 				joinGotoAndLabel(lexemvar, operators);
 			}
 			else
 			{
+				cout << "57" << endl;
 				posix.push_back(lexem);
 			}
-			cout << "57" << endl;
-			*/
-			posix.push_back(lexem);
+			//posix.push_back(lexem);
 		}
 		else if(lexem->getype() == NUMBER)
 		{
