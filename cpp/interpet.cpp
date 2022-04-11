@@ -15,6 +15,9 @@ enum LEXEM_TYPE {
 };
 
 enum OPERATOR {
+	IF, THEN,
+	ELSE, ENDIF,
+	WHILE, ENDWHILE,
 	GOTO, ASSIGN, COLON,
         LBRACKET, RBRACKET,
 	OR,
@@ -32,7 +35,10 @@ enum OPERATOR {
 };
 
 int PRIORITY[] = {
-        -1, 0, -1,
+        -1, -1,
+	-1, -1,
+	-1, -1,
+	-1, 0, -1,
 	-1, -1,
 	1,
 	2,
@@ -49,6 +55,9 @@ int PRIORITY[] = {
 
 
 string OPERTEXT[] = {
+	"if", "then",
+	"else", "endif",
+	"while", "endwhile",
 	"goto", ":=", ":",
 	"(", ")",
 	"or",
@@ -74,6 +83,7 @@ public:
 
 	}
 	LEXEM_TYPE getype();
+	virtual void print() = 0;
 };
 
 class Number : public Lexem
@@ -121,6 +131,7 @@ public:
 class Goto : public Oper
 {
 	int row;
+	OPERATOR op;
 public:
 	enum {UNDEFINED = -INT32_MAX};
 	Goto(OPERATOR opertype);
@@ -133,6 +144,7 @@ public:
 Goto::Goto(OPERATOR opertype) : Oper(opertype)
 {
 	row = UNDEFINED;
+	op = opertype;
 }
 
 
@@ -184,7 +196,10 @@ bool Variable::inLableTable()
 
 void Variable::print()
 {
-	cout << name << Var[name] << "|";
+	if(inLableTable())
+		cout << " LABEL " << name << "=" << Labels[name];
+	else
+		cout << name << "(" << Var[name] << ")";
 }
 
 Lexem::Lexem()
@@ -217,8 +232,43 @@ void Number::print()
 	cout << value;
 }
 
+void print(std::vector<Lexem *> vect)
+{
+	for(int i = 0; i < vect.size(); i++)
+	{
+		cout << " ";
+		vect[i]->print();
+	}
+	cout << endl;
+}
+
 Oper::Oper(string ch) : Lexem(OPER)
 {
+
+	if(ch == "while")
+	{
+		opertype = WHILE;
+	}
+	if(ch == "endwhile")
+	{
+		opertype = ENDWHILE;
+	}
+	if(ch == "endif")
+	{
+		opertype = ENDIF;
+	}
+	if(ch == "then")
+	{
+		opertype = THEN;
+	}
+	if(ch == "if")
+	{
+		opertype = IF;
+	}
+	if(ch == "else")
+	{
+		opertype = ELSE;
+	}
 	if(ch == "+")
 	{
 		opertype = PLUS;
@@ -332,6 +382,7 @@ int Oper::getPriority()
 
 int Oper::getValue(const Number & left, const Number & right)
 {
+	cerr << "LOG : " << endl;
 	switch(opertype)
 	{
 		case PLUS:
@@ -437,6 +488,7 @@ int assign(Lexem *left, Lexem *right)
 		num = static_cast<Variable *>(right)->getValue();
 	}
 	static_cast<Variable *>(left)->setValue(num);
+	cout << "NUM " << num << endl;
 	return num;
 }
 
@@ -456,10 +508,10 @@ void initLabels(std::vector<Lexem *> &infix, int row)
 	{
 		if(infix[i - 1]->getype() == VARIA && infix[i]->getype() == OPER)
 		{
-			cout << "  23" << endl;
+			cerr << "Log :  Variable + oper" << endl;
 			if(static_cast<Oper *>(infix[i])->getType() == COLON)
 			{
-				cout << "ttt" << endl;
+				cerr << "Log : COLON" << endl;
 				Labels[((Variable *)infix[i - 1])->getName()] = row;
 				delete infix[i - 1];
 				delete infix[i];
@@ -468,8 +520,64 @@ void initLabels(std::vector<Lexem *> &infix, int row)
 				i++;
 			}
 		}
-		cout << "  24" << endl;
 	}
+}
+
+
+void initJumps(std::vector<std::vector<Lexem *>> infix)
+{
+	std::stack<Goto *> stackIfElse, stackWhile;
+	for(int row = 0; row < (int)infix.size(); row++)
+	{
+		for(int i = 0; i < (int)infix[row].size(); i++)
+		{
+			if(infix[row][i]->getype() == OPER)
+			{
+				if(infix[row][i] == nullptr)
+				{
+					continue;
+				}
+				cerr << "INITJUMPs" << endl;
+				Oper *lexemoper = static_cast<Oper *>(infix[row][i]);
+				if(lexemoper->getType() == IF)
+				{
+					cerr << "coming1" << endl;
+					stackIfElse.push((Goto *)lexemoper);
+				}
+				else if(lexemoper->getType() == ELSE)
+				{
+					cerr << "coming2" << endl;
+					stackIfElse.top()->setRow(row + 1);
+					stackIfElse.pop();
+					stackIfElse.push((Goto *)lexemoper);
+				}
+				else if(lexemoper->getType() == ENDIF)
+				{
+					cerr << "coming3" << endl;
+					stackIfElse.top()->setRow(row + 1);
+					stackIfElse.pop();
+				}
+				else if(lexemoper->getType() == WHILE)
+				{
+					cerr << "coming4" << endl;
+					Goto *lexemgoto = (Goto *)lexemoper;
+					lexemgoto->setRow(row);
+					stackWhile.push(lexemgoto);
+				}
+				else if(lexemoper->getType() == ENDWHILE)
+				{
+					cerr << "coming5" << endl;
+					Goto *lexemgoto = (Goto *)lexemoper;
+					lexemgoto->setRow(stackWhile.top()->getRow());
+					stackWhile.top()->setRow(row + 1);
+					stackWhile.pop();
+				}
+				cerr << "to time INITJUMPs" << endl;
+			}
+		}
+		cerr << "coming6" << endl;
+	}
+	cerr << "coming7" << endl;
 }
 
 bool isNum(char ch)
@@ -491,6 +599,10 @@ Lexem* oper(string &codeline, int i, int &next)
 		if(OPERTEXT[op] == subcodeline)
 		{
 			next = i + OPERTEXT[op].size();
+			if(op == GOTO || op == IF || op == ELSE || op == WHILE || op == ENDWHILE)
+			{
+				return new Goto(static_cast<OPERATOR>(op));
+			}
 			return new Oper(OPERTEXT[op]);
 		}
 	}
@@ -573,53 +685,6 @@ std::vector<Lexem *> parseLexem(string &codeline)
 	return infix;
 }
 
-/*vector<Lexem *> parseLexem(std::string codeline)
-{
-	int number = 0;
-	std::vector<Lexem *> infix;
-	string name;
-	for(int i = 0; i < codeline.size(); i++)
-	{
-		if(codeline[i] == '\t' || codeline[i] == ' ' || codeline[i] == '\n')
-		{
-			continue;
-		}
-		else if(codeline[i] >= '0' && codeline[i] <= '9')
-		{
-			number = number * 10 + codeline[i] - '0';
-			if(codeline[i + 1] < '0' || codeline[i + 1] > '9')
-			{
-				infix.push_back(new Number(number));
-				number = 0;
-			}
-		}
-		else if(codeline[i] >= 'A' && codeline[i] <= 'Z' || codeline[i] >= 'a' && codeline[i] <= 'z')
-		{
-			name += codeline[i];
-			if(!((codeline[i + 1] >= 'A' && codeline[i + 1] <= 'Z') || (codeline[i + 1] >= 'a' && codeline[i + 1] <= 'z')) || (codeline[i + 1] < '0' || codeline[i + 1] > '9'))
-			{
-				infix.push_back(new Variable(name));
-				name = "";
-			}
-		}
-		else
-		{
-			int n = sizeof(OPERTEXT) / sizeof(string);
-			for(int op = 0; op < n; op++)
-			{
-				string subcodeline = codeline.substr(i, OPERTEXT[op].size());
-				if(OPERTEXT[op] == subcodeline)
-				{
-					infix.push_back(new Oper(OPERTEXT[op]));
-					break;
-				}
-			}
-		}
-	}
-	return infix;
-}
-*/
-
 std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 {
 	std::stack<Oper *> operators;
@@ -633,8 +698,7 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 		if(lexem->getype() == VARIA)
 		{
 
-			cout << "56" << endl;
-			Variable *lexemvar = (Variable *)lexem;
+			/*Variable *lexemvar = (Variable *)lexem;
 			if(lexemvar->inLableTable())
 			{
 				cout << "join" << endl;
@@ -642,18 +706,21 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 			}
 			else
 			{
-				cout << "57" << endl;
 				posix.push_back(lexem);
-			}
-			//posix.push_back(lexem);
+			}*/
+			posix.push_back(lexem);
 		}
 		else if(lexem->getype() == NUMBER)
 		{
 			posix.push_back(lexem);
-			cout << "aaa" << endl;
 		}
 		else if(lexem->getype() == OPER)
 		{
+			//Oper *lexemoper = (Oper *)lexem;
+			if(static_cast<Oper *>(lexem)->getType() == ENDIF)
+			{
+				continue;
+			}
 			if(operators.empty())
 			{
 				operators.push(static_cast<Oper *>(lexem));
@@ -688,15 +755,17 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 		operators.pop();
 	}
 	return posix;
-
 }
 
 
 int evaluatePostfix(std::vector<Lexem *> poliz, int row)
 {
+	for(int i = 0; i < poliz.size(); i++)
+	{
+		poliz[i]->print();
+	}
 	std::stack<Number *> stack;
 	int valu = 0;
-	Lexem *l, *r;
 	for(int i = 0; i < poliz.size(); i++)
 	{
 		if(poliz[i]->getype() == VARIA)
@@ -709,23 +778,42 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
 		}
 		else if(poliz[i]->getype() == OPER)
 		{
-			if(static_cast<Oper *>(poliz[i])->getType() == GOTO)
+			Oper *ptr = static_cast<Oper *>(poliz[i]);
+			if(ptr->getType() == GOTO || ptr->getType() == ELSE || ptr->getType() == ENDWHILE)
 			{
 				Goto *lexemgoto = (Goto *)poliz[i];
 				return lexemgoto->getRow();
 			}
-			r = stack.top();
-			stack.pop();
-			l = stack.top();
-			stack.pop();
-			if(static_cast<Oper *>(poliz[i])->getType() == ASSIGN)
+			else if(ptr->getType() == IF || ptr->getType() == WHILE)
 			{
-				cout << "assign" << endl;
-				stack.push(new Number(assign(l, r)));
+				Goto *lexemgoto = (Goto *)poliz[i];
+				Number *rvalue = stack.top();
+				stack.pop();
+				if(!rvalue)
+				{
+					return lexemgoto->getRow();
+				}
+			}
+			Lexem *right_ptr = stack.top();
+			int right_value = static_cast<Number *>(right_ptr)->getValue();
+			stack.pop();
+			Lexem *left_ptr = stack.top();
+			int left_value =  static_cast<Number *>(left_ptr)->getValue();
+			stack.pop();
+			//l->print();
+			//static_cast<Oper *>(poliz[i])->print();
+			//r->print();
+			cout << endl;
+			if(ptr->getType() == ASSIGN)
+			{
+
+				stack.push(new Number(assign(left_ptr, right_ptr)));
+				valu = stack.top()->getValue();
+				cout << "VAl" << valu << endl;
 			}
 			else
 			{
-				stack.push(new Number(static_cast<Oper *>(poliz[i])->getValue(static_cast<Number *>(l)->getValue(), static_cast<Number *>(r)->getValue())));
+				stack.push(new Number(ptr->getValue(left_value, right_value)));
 			}
 			valu = stack.top()->getValue();
 			cout << valu << endl;
@@ -748,12 +836,13 @@ int main()
 	{
 		initLabels(infix[row], row);
 	}
-	cout << "pp" << endl;
+	initJumps(infix);
+	cerr << "After initJu" << endl;
 	for(const auto &infixs : infix)
 	{
 		postfix.push_back(buildPostfix(infixs));
+		print(*postfix.rbegin());
 	}
-	cout << "PPPP" << endl;
 	int row = 0;
 	while(0 <= row && row < postfix.size())
 	{
