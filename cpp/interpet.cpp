@@ -75,8 +75,8 @@ string OPERTEXT[] = {
 
 class Lexem
 {
-	LEXEM_TYPE type;
 public:
+	LEXEM_TYPE type;
 	Lexem();
 	Lexem(LEXEM_TYPE typ) : type(typ)
 	{
@@ -244,124 +244,13 @@ void print(std::vector<Lexem *> vect)
 
 Oper::Oper(string ch) : Lexem(OPER)
 {
-
-	if(ch == "while")
+	for(int i = 0; i < sizeof(OPERTEXT) / sizeof(string); i++)
 	{
-		opertype = WHILE;
+		if(OPERTEXT[i] == ch)
+		{
+			opertype = (OPERATOR)i;
+		}
 	}
-	if(ch == "endwhile")
-	{
-		opertype = ENDWHILE;
-	}
-	if(ch == "endif")
-	{
-		opertype = ENDIF;
-	}
-	if(ch == "then")
-	{
-		opertype = THEN;
-	}
-	if(ch == "if")
-	{
-		opertype = IF;
-	}
-	if(ch == "else")
-	{
-		opertype = ELSE;
-	}
-	if(ch == "+")
-	{
-		opertype = PLUS;
-	}
-	else if(ch == "-")
-	{
-		opertype = MINUS;
-	}
-	else if(ch == "*")
-	{
-		opertype = MULTIPLY;
-	}
-	else if(ch == "(")
-	{
-		opertype = LBRACKET;
-	}
-	else if(ch == ")")
-	{
-		opertype = RBRACKET;
-	}
-	else if(ch == ":=")
-	{
-		opertype = ASSIGN;
-	}
-	else if(ch == "or")
-	{
-		opertype = OR;
-	}
-	else if(ch == "goto")
-	{
-		opertype = GOTO;
-	}
-	else if(ch == ":")
-	{
-		opertype = COLON;
-	}
-	else if(ch == "and")
-	{
-		opertype = AND;
-	}
-	else if(ch == "|")
-	{
-		opertype = BITOR;
-	}
-	else if(ch == "^")
-	{
-		opertype = XOR;
-	}
-	else if(ch == "&")
-	{
-		opertype = BITAND;
-	}
-	else if(ch == "==")
-	{
-		opertype = EQ;
-	}
-	else if(ch == "!=")
-	{
-		opertype = NEQ;
-	}
-	else if(ch == "<=")
-	{
-		opertype = LEQ;
-	}
-	else if(ch == "<")
-	{
-		opertype = LT;
-	}
-	else if(ch == ">=")
-	{
-		opertype = GEQ;
-	}
-	else if(ch == ">")
-	{
-		opertype = GT;
-	}
-	else if(ch == "<<")
-	{
-		opertype = SHL;
-	}
-	else if(ch == ">>")
-	{
-		opertype = SHR;
-	}
-	else if(ch == "/")
-	{
-		opertype = DIV;
-	}
-	else if(ch == "%")
-	{
-		opertype = MOD;
-	}
-
 }
 
 Oper::Oper(OPERATOR opertype)
@@ -397,10 +286,10 @@ int Oper::getValue(const Number & left, const Number & right)
 		{
 			return left.getValue() * right.getValue();
 		}
-		case ASSIGN:
-		{
-			return right.getValue();
-		}
+		//case ASSIGN:
+		//{
+		//	return right.getValue();
+		//}
 		case OR:
 		{
 			return left.getValue() || right.getValue();
@@ -461,7 +350,6 @@ int Oper::getValue(const Number & left, const Number & right)
 		{
 			return left.getValue() % right.getValue();
 		}
-
 	}
 	return 0;
 }
@@ -512,7 +400,7 @@ void initLabels(std::vector<Lexem *> &infix, int row)
 			if(static_cast<Oper *>(infix[i])->getType() == COLON)
 			{
 				cerr << "Log : COLON" << endl;
-				Labels[((Variable *)infix[i - 1])->getName()] = row;
+				Labels[static_cast<Variable *>(infix[i - 1])->getName()] = row;
 				delete infix[i - 1];
 				delete infix[i];
 				infix[i - 1] = nullptr;
@@ -531,53 +419,44 @@ void initJumps(std::vector<std::vector<Lexem *>> infix)
 	{
 		for(int i = 0; i < (int)infix[row].size(); i++)
 		{
+			if(infix[row][i] == nullptr)
+			{
+				continue;
+			}
 			if(infix[row][i]->getype() == OPER)
 			{
-				if(infix[row][i] == nullptr)
-				{
-					continue;
-				}
-				cerr << "INITJUMPs" << endl;
 				Oper *lexemoper = static_cast<Oper *>(infix[row][i]);
 				if(lexemoper->getType() == IF)
 				{
-					cerr << "coming1" << endl;
 					stackIfElse.push((Goto *)lexemoper);
 				}
 				else if(lexemoper->getType() == ELSE)
 				{
-					cerr << "coming2" << endl;
 					stackIfElse.top()->setRow(row + 1);
 					stackIfElse.pop();
 					stackIfElse.push((Goto *)lexemoper);
 				}
 				else if(lexemoper->getType() == ENDIF)
 				{
-					cerr << "coming3" << endl;
 					stackIfElse.top()->setRow(row + 1);
 					stackIfElse.pop();
 				}
 				else if(lexemoper->getType() == WHILE)
 				{
-					cerr << "coming4" << endl;
 					Goto *lexemgoto = (Goto *)lexemoper;
 					lexemgoto->setRow(row);
 					stackWhile.push(lexemgoto);
 				}
 				else if(lexemoper->getType() == ENDWHILE)
 				{
-					cerr << "coming5" << endl;
 					Goto *lexemgoto = (Goto *)lexemoper;
 					lexemgoto->setRow(stackWhile.top()->getRow());
 					stackWhile.top()->setRow(row + 1);
 					stackWhile.pop();
 				}
-				cerr << "to time INITJUMPs" << endl;
 			}
 		}
-		cerr << "coming6" << endl;
 	}
-	cerr << "coming7" << endl;
 }
 
 bool isNum(char ch)
@@ -601,7 +480,7 @@ Lexem* oper(string &codeline, int i, int &next)
 			next = i + OPERTEXT[op].size();
 			if(op == GOTO || op == IF || op == ELSE || op == WHILE || op == ENDWHILE)
 			{
-				return new Goto(static_cast<OPERATOR>(op));
+				return new Goto((OPERATOR)op);
 			}
 			return new Oper(OPERTEXT[op]);
 		}
@@ -717,7 +596,7 @@ std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix)
 		else if(lexem->getype() == OPER)
 		{
 			//Oper *lexemoper = (Oper *)lexem;
-			if(static_cast<Oper *>(lexem)->getType() == ENDIF)
+			if(static_cast<Oper *>(lexem)->getType() == ENDIF || static_cast<Oper *>(lexem)->getType() == THEN)
 			{
 				continue;
 			}
@@ -836,8 +715,8 @@ int main()
 	{
 		initLabels(infix[row], row);
 	}
-	initJumps(infix);
 	cerr << "After initJu" << endl;
+	initJumps(infix);
 	for(const auto &infixs : infix)
 	{
 		postfix.push_back(buildPostfix(infixs));
