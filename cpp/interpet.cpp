@@ -12,7 +12,6 @@ enum LEXEM_TYPE {
         NUMBER,
         OPER,
 	VARIA,
-	ARRAY
 };
 
 enum OPERATOR {
@@ -145,18 +144,19 @@ public:
 	void print();
 };
 
-class ArrayElem : public Lexem
+/*class ArrayElem : public Lexem
 {
 	string name;
 	int index;
 public:
 	ArrayElem();
-	ArrayElem(string);
 	int getValue();
 	void setValue(int);
 
 }
+*/
 
+/*
 ArrayElem::ArrayElem()
 {
 	name = "";
@@ -171,12 +171,7 @@ int ArrayElem::getValue()
 void ArrayElem::setValue(int value)
 {
 	ArrayElem[index] = value;
-}
-
-ArrayElem::ArrayElem(string name) : Lexem(ARRAY)
-{
-	this->name = name;
-}
+}*/
 
 Goto::Goto(OPERATOR opertype) : Oper(opertype)
 {
