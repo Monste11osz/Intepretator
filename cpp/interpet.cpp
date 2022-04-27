@@ -160,19 +160,6 @@ public:
 	void print() {}
 };
 
-/*class Dereference : public Oper
-{
-public:
-	Dereference() : Oper((OPERATOR)DEREF)
-	{
-
-	}
-	ArrayElem::getValue(Variable &array, int index)
-	{
-		return new ArrayElem((array.getName()), index);
-	}
-};*/
-
 ArrayElem::ArrayElem(string name1, int index1) : Lexem(ARRAYS)
 {
 	this->name = name1;
