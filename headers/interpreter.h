@@ -65,6 +65,8 @@ void joinGotoAndLabel(Variable *lexemvar, std::stack<Oper *> &stack);
 
 int assign(Lexem *left, Lexem *right);
 
+ArrayElem::ArrayElem(string name1, int index1);
+
 void clear(std::vector<std::vector<Lexem *>> vect);
 
 void print(std::vector<Lexem *> vect);
@@ -119,7 +121,8 @@ class ArrayElem : public Lexem
 {
 public:
         ArrayElem(std::string);
-        string getName();
+        ArrayElem(string name, int index);
+	string getName();
         int getValue();
         int setValue(int);
 };
