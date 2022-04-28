@@ -132,7 +132,7 @@ void joinGotoAndLabel(Variable *lexemvar, std::stack<Oper *> &stack);
 
 int assign(Lexem *left, Lexem *right);
 
-//ArrayElem(string name1, int index1);
+void clen(std::vector<Lexem *> vect);
 
 void clear(std::vector<std::vector<Lexem *>> vect);
 
