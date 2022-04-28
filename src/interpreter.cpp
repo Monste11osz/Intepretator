@@ -56,14 +56,15 @@ std::map<string, int> Var;
 std::map<string, int> Labels;
 std::map<string, vector<int> > ArrayTabel;
 
+ArrayElem::ArrayElem(string name1, int index1) : Lexem(ARRAYS)
+{
+        this->name = name1;
+        this->index = index1;
+}
+
 string ArrayElem::getName()
 {
         return name;
-}
-
-ArrayElem::ArrayElem(string ch) : Lexem(ARRAYS)
-{
-        name = ch;
 }
 
 int ArrayElem::getValue()
@@ -587,10 +588,6 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
                 {
                         stack.push(static_cast<Number *>(poliz[i]));
                 }
-                /*else if(poliz[i]->getype() == ARRAYS)
-                {
-                        stack.push(static_cast<Number *>(poliz[i]));
-                }*/
                 else if(poliz[i]->getype() == OPER)
                 {
                         Oper *ptr = static_cast<Oper *>(poliz[i]);
@@ -610,13 +607,6 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
                                 }
                                 continue;
                         }
-                        /*else if(ptr->getType() == DEREF)
-                        {
-                                Lexem *right = stack.top();
-                                stack.pop();
-                                Lexem *left = stack.top();
-                                stack.pop();
-                        }*/
                         Lexem *right_ptr = stack.top();
                         int right_value = static_cast<Number *>(right_ptr)->getValue();
                         stack.pop();
@@ -624,6 +614,10 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
                         int left_value =  static_cast<Number *>(left_ptr)->getValue();
                         stack.pop();
                         cout << endl;
+			if(ptr->getType() == DEREF)
+                        {
+                                stack1.push(new ArrayElem(stati>
+                        }
                         if(ptr->getType() == ASSIGN)
                         {
                                 stack.push(new Number(assign(left_ptr, right_ptr)));
