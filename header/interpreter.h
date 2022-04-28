@@ -41,6 +41,73 @@ extern std::map<string, int> Labels;
 extern std::map<string, vector<int> > ArrayTabel;
 
 
+class Lexem {
+	public:
+	LEXEM_TYPE type;
+	Lexem();
+	Lexem(LEXEM_TYPE typ) : type(typ) {}
+	LEXEM_TYPE getype();
+	virtual void print() = 0;
+};
+
+class Number : public Lexem {
+	int value;
+public:
+	Number();
+	Number(int num = 0);
+	int getValue() const;
+	void print();
+};
+
+class Oper : public Lexem {
+	OPERATOR opertype;
+public:
+	Oper();
+	Oper(string ch);
+	OPERATOR getType();
+	Oper(OPERATOR opertype);
+	int getPriority();
+	int getValue(const Number &left, const Number &right);
+	void print();
+};
+
+class Variable : public Lexem {
+	string name;
+public:
+	Variable();
+	Variable(string name);
+	int getValue();
+	void setValue(int value);
+	string getName();
+	bool inLableTable();
+	void print();
+};
+
+class Goto : public Oper {
+	int row;
+	OPERATOR op;
+public:
+	enum {UNDEFINED = -INT32_MAX};
+	Goto(OPERATOR opertype);
+	void setRow(int row);
+	int getRow();
+	void print();
+};
+
+class ArrayElem : public Lexem
+{
+	string name;
+	int index;
+public:
+        ArrayElem(std::string);
+        ArrayElem(string name, int index);
+	string getName();
+        int getValue();
+        int setValue(int);
+	void print();
+};
+
+
 int evaluatePostfix(std::vector<Lexem *> poliz, int row);
 
 std::vector<Lexem *> buildPostfix(std::vector<Lexem *> infix);
@@ -65,64 +132,8 @@ void joinGotoAndLabel(Variable *lexemvar, std::stack<Oper *> &stack);
 
 int assign(Lexem *left, Lexem *right);
 
-ArrayElem::ArrayElem(string name1, int index1);
+//ArrayElem(string name1, int index1);
 
 void clear(std::vector<std::vector<Lexem *>> vect);
 
 void print(std::vector<Lexem *> vect);
-
-class Lexem {
-	public:
-	Lexem();
-	Lexem(LEXEM_TYPE typ) : type(typ);
-	LEXEM_TYPE getype();
-	virtual void print();
-};
-
-class Number : public Lexem {
-public:
-	Number();
-	Number(int num = 0);
-	int getValue() const;
-	void print();
-};
-
-class Oper : public Lexem {
-public:
-	Oper();
-	Oper(string ch);
-	OPERATOR getType();
-	Oper(OPERATOR opertype);
-	int getPriority();
-	int getValue(const Number &left, const Number &right);
-	void print();
-};
-
-class Variable : public Lexem {
-	public:
-	Variable();
-	Variable(string name);
-	int getValue();
-	void setValue(int value);
-	string getName();
-	bool inLableTable();
-	void print();
-};
-
-class Goto : public Oper {
-public:
-	Goto(OPERATOR opertype);
-	void setRow(int row);
-	int getRow();
-	void print();
-};
-
-class ArrayElem : public Lexem
-{
-public:
-        ArrayElem(std::string);
-        ArrayElem(string name, int index);
-	string getName();
-        int getValue();
-        int setValue(int);
-};
