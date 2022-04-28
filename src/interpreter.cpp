@@ -1,3 +1,4 @@
+#include "interpreter.h"
 #include <iostream>
 #include <cstdio>
 #include <string>
@@ -5,7 +6,6 @@
 #include <stack>
 #include <map>
 
-#include "interpreter.h"
 
 using namespace std;
 
@@ -76,6 +76,11 @@ int ArrayElem::setValue(int value)
 {
         return ArrayTabel[name][index] = value;
 }
+
+/*void print()
+{
+
+}*/
 
 Goto::Goto(OPERATOR opertype) : Oper(opertype)
 {
@@ -293,6 +298,11 @@ void Oper::print()
 {
         cout << OPERTEXT[opertype];
 }
+
+/*Lexem(LEXEM_TYPE typ) : type(typ)
+{
+
+}*/
 
 LEXEM_TYPE Lexem::getype()
 {
@@ -577,6 +587,7 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
                 poliz[i]->print();
         }
         std::stack<Number *> stack;
+        std::stack<Lexem *> stack1;
         int valu = 0;
         for(int i = 0; i < poliz.size(); i++)
         {
@@ -616,7 +627,7 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
                         cout << endl;
 			if(ptr->getType() == DEREF)
                         {
-                                stack1.push(new ArrayElem(stati>
+				stack1.push(new ArrayElem(static_cast<Variable *>(left_ptr)->getName(), right_value));
                         }
                         if(ptr->getType() == ASSIGN)
                         {
