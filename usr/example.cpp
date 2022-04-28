@@ -24,7 +24,7 @@ int main()
         }
         cerr << "After initJu" << endl;
         initJumps(infix);
-        for(const auto &infixs : std::infix)
+        for(const auto &infixs : infix)
         {
                 postfix.push_back(buildPostfix(infixs));
                 print(*postfix.rbegin());
@@ -34,7 +34,6 @@ int main()
         {
                 row = evaluatePostfix(postfix[row], row);
         }
-	clear(infix);
+        clear(infix);
         return 0;
 }
-
