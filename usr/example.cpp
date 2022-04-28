@@ -34,6 +34,7 @@ int main()
         {
                 row = evaluatePostfix(postfix[row], row);
         }
+	clear(infix);
         return 0;
 }
 
