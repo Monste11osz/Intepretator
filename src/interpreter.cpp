@@ -77,10 +77,10 @@ int ArrayElem::setValue(int value)
         return ArrayTabel[name][index] = value;
 }
 
-/*void print()
+void ArrayElem::print()
 {
 
-}*/
+}
 
 Goto::Goto(OPERATOR opertype) : Oper(opertype)
 {
@@ -180,6 +180,25 @@ void print(std::vector<Lexem *> vect)
                 vect[i]->print();
         }
         cout << endl;
+}
+
+void clen(std::vector<Lexem *> vect)
+{
+        for(int i = 0; i < vect.size(); i++)
+        {
+                delete vect[i];
+        }
+}
+
+void clear(std::vector<std::vector<Lexem *>> vect)
+{
+        for(int i = 0; i < vect.size(); i++)
+        {
+                for(int j = 0; j < vect[i].size(); j++)
+                {
+                        delete vect[i][j];
+                }
+        }
 }
 
 Oper::Oper(string ch) : Lexem(OPER)
@@ -298,11 +317,6 @@ void Oper::print()
 {
         cout << OPERTEXT[opertype];
 }
-
-/*Lexem(LEXEM_TYPE typ) : type(typ)
-{
-
-}*/
 
 LEXEM_TYPE Lexem::getype()
 {
@@ -586,18 +600,18 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
         {
                 poliz[i]->print();
         }
-        std::stack<Number *> stack;
-        std::stack<Lexem *> stack1;
+        std::stack<Lexem *> stack;
+        std::vector<Lexem *> cleer;
         int valu = 0;
         for(int i = 0; i < poliz.size(); i++)
         {
                 if(poliz[i]->getype() == VARIA)
                 {
-                        stack.push(static_cast<Number *>(poliz[i]));
+                        stack.push(poliz[i]);
                 }
                 else if(poliz[i]->getype() == NUMBER)
                 {
-                        stack.push(static_cast<Number *>(poliz[i]));
+                        stack.push(poliz[i]);
                 }
                 else if(poliz[i]->getype() == OPER)
                 {
@@ -605,15 +619,17 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
                         if(ptr->getType() == GOTO || ptr->getType() == ELSE || ptr->getType() == ENDWHILE)
                         {
                                 Goto *lexemgoto = (Goto *)poliz[i];
+                                clen(cleer);
                                 return lexemgoto->getRow();
                         }
                         else if(ptr->getType() == IF || ptr->getType() == WHILE)
                         {
                                 Goto *lexemgoto = (Goto *)poliz[i];
-                                Number *rvalue = stack.top();
+                                Number *rvalue =  static_cast<Number *>(stack.top());
                                 stack.pop();
                                 if(!rvalue)
                                 {
+                                        clen(cleer);
                                         return lexemgoto->getRow();
                                 }
                                 continue;
@@ -625,23 +641,25 @@ int evaluatePostfix(std::vector<Lexem *> poliz, int row)
                         int left_value =  static_cast<Number *>(left_ptr)->getValue();
                         stack.pop();
                         cout << endl;
-			if(ptr->getType() == DEREF)
+                        if(ptr->getType() == DEREF)
                         {
-				stack1.push(new ArrayElem(static_cast<Variable *>(left_ptr)->getName(), right_value));
+                                stack.push(new ArrayElem(static_cast<Variable *>(left_ptr)->getName(), right_value));
                         }
                         if(ptr->getType() == ASSIGN)
                         {
                                 stack.push(new Number(assign(left_ptr, right_ptr)));
-                                valu = stack.top()->getValue();
+                                valu =  static_cast<Number *>(stack.top())->getValue();
                                 cout << "VAl" << valu << endl;
                         }
                         else
                         {
                                 stack.push(new Number(ptr->getValue(left_value, right_value)));
+                                cleer.push_back(stack.top());
                         }
-                        valu = stack.top()->getValue();
+                        valu = static_cast<Number *>(stack.top())->getValue();
                         cout << valu << endl;
                 }
         }
+        clen(cleer);
         return row + 1;
 }
